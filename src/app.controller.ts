@@ -4,7 +4,8 @@ import { CheckSuiteAppCall } from './types/check-suite-app-call';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) {
+  }
 
   @Get()
   getHello(): string {
@@ -16,14 +17,16 @@ export class AppController {
     console.log(body);
     if (body.check_suite) {
       const checkSuiteCall: CheckSuiteAppCall = body;
-      this.appService
-        .addCommit(checkSuiteCall)
-        .then((r) => {
-          console.log(r);
-        })
-        .catch((reason) => {
-          console.log(reason);
-        });
+      if (checkSuiteCall.sender.type === 'Bot') {
+        this.appService
+          .addCommit(checkSuiteCall)
+          .then((r) => {
+            console.log(r);
+          })
+          .catch((reason) => {
+            console.log(reason);
+          });
+      }
     }
     return res.status(HttpStatus.CREATED);
   }
