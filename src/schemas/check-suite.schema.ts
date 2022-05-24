@@ -8,6 +8,9 @@ export class CheckSuiteShort {
 
   @Prop({ required: true, unique: true })
   sha: string;
+
+  @Prop({ default: false })
+  was_done: boolean;
 }
 
 export type CheckSuiteShortDocument = CheckSuiteShort & Document;

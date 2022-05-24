@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CheckSuite } from '../types/check-suite';
-import { Repository } from '../types/repository';
 import { Octokit } from 'octokit';
 import { createAppAuth } from '@octokit/auth-app';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,13 +7,15 @@ import {
   CheckSuiteShortDocument,
 } from '../schemas/check-suite.schema';
 import { Model } from 'mongoose';
+import { CheckSuiteHook } from '../types/check-suite-hook';
 
 @Injectable()
 export class HookService {
   constructor(
     @InjectModel(CheckSuiteShort.name)
     private checkSuiteShortModel: Model<CheckSuiteShortDocument>,
-  ) {}
+  ) {
+  }
 
   private readonly octokit = new Octokit({
     authStrategy: createAppAuth,
@@ -26,25 +26,25 @@ export class HookService {
     },
   });
 
-  async work(checkSuite: CheckSuite, repository: Repository) {
-    const runs = await this.octokit.rest.checks
-      .listForSuite({
-        owner: repository.owner.login,
-        repo: repository.name,
-        check_suite_id: checkSuite.id,
-      })
-      .then((value) => {
-        return value.data.check_runs;
-      })
-      .catch((reason) => {
-        console.log(reason);
-        return null;
-      });
+  async shouldRun(head_sha: string): Promise<boolean> {
+    const check = await this.checkSuiteShortModel
+      .findOne({ sha: head_sha })
+      .exec();
+    return check ? !check.was_done : false;
+  }
+
+  async setRan(head_sha: string) {
+    await this.checkSuiteShortModel
+      .findOneAndUpdate({ sha: head_sha }, { was_done: true })
+      .exec();
+  }
+
+  async work(checkSuiteHook: CheckSuiteHook) {
     const commits = await this.octokit.rest.pulls
       .listCommits({
-        owner: repository.owner.login,
-        repo: repository.name,
-        pull_number: checkSuite.pull_requests[0].number,
+        owner: checkSuiteHook.repository.owner.login,
+        repo: checkSuiteHook.repository.name,
+        pull_number: checkSuiteHook.check_suite.pull_requests[0].number,
       })
       .then((value) => {
         return value.data;
@@ -54,12 +54,25 @@ export class HookService {
         return null;
       });
     const lastCommit = commits[commits.length - 1];
-    if (/(rubocop|web)-linter commit/g.test(lastCommit.commit.message)) {
+    if (await this.shouldRun(lastCommit.sha)) {
+      const runs = await this.octokit.rest.checks
+        .listForSuite({
+          owner: checkSuiteHook.repository.owner.login,
+          repo: checkSuiteHook.repository.name,
+          check_suite_id: checkSuiteHook.check_suite.id,
+        })
+        .then((value) => {
+          return value.data.check_runs;
+        })
+        .catch((reason) => {
+          console.log(reason);
+          return null;
+        });
       for (const run of runs) {
         this.octokit.rest.checks
           .create({
-            owner: repository.owner.login,
-            repo: repository.name,
+            owner: checkSuiteHook.repository.owner.login,
+            repo: checkSuiteHook.repository.name,
             name: run.name,
             head_sha: lastCommit.sha,
             conclusion: run.conclusion,

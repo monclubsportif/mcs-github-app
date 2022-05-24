@@ -11,11 +11,9 @@ export class HookController {
     console.log(body);
     if (body.check_suite) {
       const checkSuiteHook = body as CheckSuiteHook;
-      const checkSuite = checkSuiteHook.check_suite;
-      const repository = checkSuiteHook.repository;
-      if (checkSuite.status === 'completed') {
+      if (checkSuiteHook.check_suite.status === 'completed') {
         this.hookService
-          .work(checkSuite, repository)
+          .work(checkSuiteHook)
           .then(() => {})
           .catch(() => {});
       }
