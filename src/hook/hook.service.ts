@@ -67,6 +67,7 @@ export class HookService {
           console.log(reason);
           return null;
         });
+      await this.setRan(lastCommit.sha);
       for (const run of runs) {
         this.octokit.rest.checks
           .create({
@@ -87,7 +88,6 @@ export class HookService {
             return null;
           });
       }
-      await this.setRan(lastCommit.sha);
     }
   }
 }
