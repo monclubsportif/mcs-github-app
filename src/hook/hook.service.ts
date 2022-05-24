@@ -14,14 +14,13 @@ export class HookService {
   constructor(
     @InjectModel(CheckSuiteShort.name)
     private checkSuiteShortModel: Model<CheckSuiteShortDocument>,
-  ) {
-  }
+  ) {}
 
   private readonly octokit = new Octokit({
     authStrategy: createAppAuth,
     auth: {
       appId: process.env.APP_ID,
-      privateKey: process.env.PRIVATE_KEY.replace(/\\\\n/g, '\n'),
+      privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
       installationId: process.env.INSTALLATION_ID,
     },
   });
@@ -88,6 +87,7 @@ export class HookService {
             return null;
           });
       }
+      await this.setRan(lastCommit.sha);
     }
   }
 }
