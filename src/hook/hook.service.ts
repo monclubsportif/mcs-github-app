@@ -3,9 +3,20 @@ import { CheckSuite } from '../types/check-suite';
 import { Repository } from '../types/repository';
 import { Octokit } from 'octokit';
 import { createAppAuth } from '@octokit/auth-app';
+import { InjectModel } from '@nestjs/mongoose';
+import {
+  CheckSuiteShort,
+  CheckSuiteShortDocument,
+} from '../schemas/check-suite.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class HookService {
+  constructor(
+    @InjectModel(CheckSuiteShort.name)
+    private checkSuiteShortModel: Model<CheckSuiteShortDocument>,
+  ) {}
+
   private readonly octokit = new Octokit({
     authStrategy: createAppAuth,
     auth: {
